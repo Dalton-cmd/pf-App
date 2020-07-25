@@ -7,12 +7,7 @@ import pandas as pd
 import datetime
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
-df = pd.DataFrame(columns=['Date','Category','Amount','Description'])
-data = df.to_dict('records')
-columns = df.columns
-#df = df.to_json()
+columns =   ['Transaction Date', 'Category', 'Amount', 'Description']
 
 options =   [{'label':'Grocery', 'value':'Grocery'},
             {'label':'Gas', 'value':'Gas'},
@@ -20,133 +15,85 @@ options =   [{'label':'Grocery', 'value':'Grocery'},
 
 optionlist = [{'label':d['label']} for d in options]
 
-app.layout = html.Div([
+table = dash_table.DataTable(columns=[{"name": column, "id": column} for column in columns],
+        data=[],
+        id='table')
+
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets, prevent_initial_callbacks=True)
+
+today = datetime.date.today()
+
+app.layout = html.Div([  #OUTSIDE DIV
+    #FRONT PAGE DIVISION
     html.Div([
+        #INPUT DIVISION
         html.Div([
-            html.Div([
-                html.H3('Inputs'),
+            #INPUT HEADER DESCRIPTION
+            html.H3('Inputs'),
 
-                    html.H6('Date of Transaction'),
-                    dcc.DatePickerSingle(
-                        id='dateinput',
-                        max_date_allowed=datetime.date.today(),
-                        date=datetime.date.today(),
-                        style={'paddingLeft':'0px'}
-                            ),
+            #BEGIN CREATING INPUT CORE COMPONENTS
+            #TRANSACTION DATE
+            html.H6('Date of Transaction'),
+            dcc.DatePickerSingle(
+                id=columns[0],
+                max_date_allowed=datetime.date.today(),
+                date = today,
+                style={'paddingLeft':'0px'}),
 
-                    html.H6('Transaction Category'),
-                    dcc.Dropdown(
-                        id='typeinput',
-                        options=options
-                        ),
+            #TRANSACTION CATEGORY
+            html.H6('Transaction Category'),
+            dcc.Dropdown(
+                id=columns[1],
+                options=options),
 
-                    html.H6('Dollar Value'),
-                    dcc.Input(
-                        id='dollarinput',
-                        type='number',
-                        debounce=True,
-                        placeholder=" Input Dollar Amount ",
-                        style={'paddingLeft':'5px',
-                                'paddingRight':'40px'}
-                            ),
+            #TRANSACTION DOLLAR VALUE
+            html.H6('Dollar Value'),
+            dcc.Input(
+                id=columns[2],
+                type='number',
+                debounce=True,
+                placeholder=" Input Dollar Amount "),
 
-                    html.H6('Description of Transaction'),
-                    dcc.Input(
-                        id='descinput',
-                        type='text',
-                        debounce=False,
-                        placeholder=" Add Optional Description ",
-                        style={'paddingLeft':'5px',
-                                'paddingRight':'40px'},
-                            ),
+            #TRANSACTION DESCRIPTION
+            html.H6('Description of Transaction'),
+            dcc.Input(
+                id=columns[3],
+                type='text',
+                debounce=False,
+                placeholder=" Add Optional Description "),
 
-                    html.H6('Submit Transaction'),
-                    html.Button('Submit', id='submit-button', n_clicks=0,
-                        style={'paddingLeft':'7px'}
-                            ),
-                    ], className='four columns')
-                ]),
+            #SUBMIT BUTTON
+            html.H6("Submit Transaction Details"),
+            html.Button("Submit", id="submit"),
+            dcc.Store(id='cache', data=[]),
 
-            html.Div([
-                html.H3('Output'),
-                dash_table.DataTable(
-                    id='datatable',
-                    columns=[{
-                        'name': '{}'.format(i),
-                        'id': '{}'.format(i),
-                        'deletable': False,
-                        'renamable': False
-                    } for i in df.columns],
-                    data=[
-                    {'column-{}'.format(i): (j + (i-1)*5) for i in range(1, 5)}
-                        for j in range(5)],
-                    editable=True,
-                    row_deletable=True
-                    #dropdown={
-                    #    'valuetype': {
-                    #        'options': optionlist
-                    #}
-                #}
-            )], className="eight columns"),
-        ], className="row")
-])
+            #CLOSES INPUT DIVISION WITH 1/3RD THE COLUMN WIDTH
+            ], className='four columns'),
+
+        #DATATABLE OUTPUT DIVISION
+        html.Div([
+            html.H6("Plotted Transactions"),
+             table
+             ], className='eight columns') #CLOSED OUT THE DATATABLE DIV
+
+    ]) #CLOSES FRONT PAGE DIVISION
+
+    #BEGIN PAGE TWO
+
+]) #CLOSES THE OUTER DIV
 
 
-
-@app.callback(
-    Output('datatable', 'data'),
-    [Input('submit-button', 'n_clicks')],
-    [State('datatable', 'data'),
-    State('datatable', 'columns'),
-    State('dateinput', 'date'),
-    State('typeinput', 'value'),
-    State('dollarinput', 'value'),
-    State('descinput', 'value')
-    ])
-def add_row(n_clicks, rows, columns, dateinput, typeinput, dollarinput, descinput):
-    details = [dateinput, typeinput, dollarinput, descinput]
-    details_dict=[{
-        'name': '{}'.format(d),
-        'id': '{}'.format(d),
-        'deletable': False,
-        'renamable': False
-    } for d in details]
-
-    if n_clicks > 0:
-            rows.append({[c['id']    for c in columns] for c in details})
-        #rows.append({c['id']: details_dict[0]['id'] for c in columns})
-    return rows
-'''
-    entry=pd.DataFrame({"date": [dateinput], "valuetype": [typeinput], "valuedollar": [dollarinput], "valuedesc": [descinput]})
-    entry = entry.set_index("date")
-    entry = entry.to_dict("rows")
-    entrydata = [dateinput, typeinput, dollarinput, descinput]
-'''
-
-'''
-    print(date),
-    print(valuetype),
-    print(valuedollar),
-    print(valuedesc),
-    print(data),
-#    data.append({'name':i, 'id':i} for i in df.columns)
-'''
+#CALLBACKS BEGIN HERE:
+@app.callback(Output("table", "data"), [Input("submit", "n_clicks")], [State("table", "data")] + [State(columns[0], "date")] +
+              [State(column, "value") for column in columns[1:]])
+def append(n_clicks, data, *args):
+    print(args)
+    data.append({columns[i]: arg for i, arg in enumerate(list(args))})
+    sample = ({columns[i]: arg for i, arg in enumerate(list(args))})
+    print(sample)
+    return data
 
 
-
-'''
-@app.callback(Output('tabs-content', 'children'),
-              [Input('tabs', 'value')])
-def render_content(tab):
-    if tab == 'tab-1':
-        return html.Div([
-            html.H3('Tab content 1')
-        ])
-    elif tab == 'tab-2':
-        return html.Div([
-            html.H3('Tab content 2')
-        ])
-'''
-
+#RUN SERVER
 if __name__ == "__main__":
     app.run_server(debug=True)
