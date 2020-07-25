@@ -7,25 +7,34 @@ import pandas as pd
 import datetime
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+#SETS THE SPECIFIC COLUMNS FOR OUR GRAPH AND DATATABLE
 columns =   ['Transaction Date', 'Category', 'Amount', 'Description']
 
+#CREATES A SET OF OPTIONS WITH LABELS AND VALUES
 options =   [{'label':'Grocery', 'value':'Grocery'},
             {'label':'Gas', 'value':'Gas'},
             {'label':'Eating Out', 'value':'Eating Out'}]
 
+#CREATES OPTION LIST FOR DROPDOWNS
 optionlist = [{'label':d['label']} for d in options]
 
+#CREATES OUR TABLE
 table = dash_table.DataTable(columns=[{"name": column, "id": column} for column in columns],
         data=[],
         id='table')
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets, prevent_initial_callbacks=True)
 
-today = datetime.date.today()
+#CREATES APPLICATION
+app = dash.Dash(__name__, external_stylesheets =external_stylesheets, prevent_initial_callbacks=True)
 
+#DEFINES THE LAYOUT OF OUR APPLICATION AND THE EMBEDDED CORE COMPONENTS
 app.layout = html.Div([  #OUTSIDE DIV
+
+    #SETTING TABS (ENCOMPASSES THE FRONT AND BACK PAGE DIVISION)
+    dcc.Tabs([
+
     #FRONT PAGE DIVISION
-    html.Div([
+    dcc.Tab(label='TAB ONE', children=[
         #INPUT DIVISION
         html.Div([
             #INPUT HEADER DESCRIPTION
@@ -37,7 +46,7 @@ app.layout = html.Div([  #OUTSIDE DIV
             dcc.DatePickerSingle(
                 id=columns[0],
                 max_date_allowed=datetime.date.today(),
-                date = today,
+                date = datetime.date.today(),
                 style={'paddingLeft':'0px'}),
 
             #TRANSACTION CATEGORY
@@ -76,9 +85,24 @@ app.layout = html.Div([  #OUTSIDE DIV
              table
              ], className='eight columns') #CLOSED OUT THE DATATABLE DIV
 
-    ]) #CLOSES FRONT PAGE DIVISION
+    ]), #CLOSES FRONT PAGE DIVISION
 
-    #BEGIN PAGE TWO
+    #BEGIN TAB TWO
+    dcc.Tab(label='TAB TWO', children=[
+    dcc.Graph(
+                figure={
+                    'data': [
+                        {'x': [1, 2, 3], 'y': [1, 4, 1],
+                            'type': 'bar', 'name': 'SF'},
+                        {'x': [1, 2, 3], 'y': [1, 2, 3],
+                         'type': 'bar', 'name': u'Montréal'},
+                    ]
+                }
+            )
+
+    ]) #CLOSES TAB TWO
+
+    ], className='custom-tabs-container' ), #CLOSES OUT TABS
 
 ]) #CLOSES THE OUTER DIV
 
@@ -92,6 +116,20 @@ def append(n_clicks, data, *args):
     sample = ({columns[i]: arg for i, arg in enumerate(list(args))})
     print(sample)
     return data
+
+'''
+@app.callback(Output('tabs-example-content', 'children'),
+              [Input('tabs-example', 'value')])
+def render_content(tab):
+    if tab == 'TAB 1':
+        return html.Div([
+            html.H3('Tab content 1')
+        ])
+    elif tab == 'TAB 2':
+        return html.Div([
+            html.H3('Tab content 2')
+        ])
+'''
 
 
 #RUN SERVER
